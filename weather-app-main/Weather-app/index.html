@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-sky="night" data-cond="clear">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aether — Weather</title>
+<meta name="description" content="Aether is a futuristic weather console: live conditions, hourly curves, a 7-day outlook, air quality and sun tracking.">
+<meta name="theme-color" content="#05070f">
+<meta name="color-scheme" content="dark light">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/01d.png">
+<link rel="apple-touch-icon" href="icons/01d.png">
+<link rel="preconnect" href="https://api.open-meteo.com" crossorigin>
+<link rel="preconnect" href="https://geocoding-api.open-meteo.com" crossorigin>
+<link rel="stylesheet" href="font/Rimouski.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- animated weather backdrop -->
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="aurora" aria-hidden="true">
+  <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+</div>
+<div class="grain" aria-hidden="true"></div>
+<div class="scanline" aria-hidden="true"></div>
+
+<a class="skip" href="#now">Skip to conditions</a>
+<div id="bar" class="progress" aria-hidden="true"></div>
+
+<div class="shell">
+
+  <!-- ░░ HEADER ░░ -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/>
+        </linearGradient></defs>
+        <circle cx="16" cy="16" r="7" fill="url(#g1)"/>
+        <g stroke="url(#g1)" stroke-width="2" stroke-linecap="round">
+          <path d="M16 1v4M16 27v4M1 16h4M27 16h4M5.5 5.5l2.8 2.8M23.7 23.7l2.8 2.8M26.5 5.5l-2.8 2.8M8.3 23.7l-2.8 2.8"/>
+        </g>
+      </svg>
+      <div class="brand-txt">
+        <strong>AETHER</strong>
+        <span>weather console</span>
+      </div>
+    </div>
+
+    <form class="search" role="search" autocomplete="off">
+      <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+      <input id="q" type="search" placeholder="Search any city…" aria-label="Search for a city"
+             role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" spellcheck="false">
+      <kbd class="hint">/</kbd>
+      <button type="button" id="geo" class="icon-btn" title="Use my location (L)" aria-label="Use my location">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <ul id="results" class="results" role="listbox" aria-label="Search results" hidden></ul>
+    </form>
+
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Temperature unit">
+        <button type="button" data-unit="c" class="on" aria-pressed="true">°C</button>
+        <button type="button" data-unit="f" aria-pressed="false">°F</button>
+      </div>
+      <button type="button" id="refresh" class="icon-btn" title="Refresh (R)" aria-label="Refresh data">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ░░ BANNERS ░░ -->
+  <div id="alerts" class="alerts" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- ░░ SAVED PLACES ░░ -->
+  <nav id="places" class="places" aria-label="Saved places"></nav>
+
+  <main class="grid" id="main">
+
+    <!-- HERO -->
+    <section class="card hero" id="now" aria-labelledby="h-now">
+      <h2 class="sr" id="h-now">Current conditions</h2>
+      <div class="hero-top">
+        <div class="loc">
+          <h3 id="city">Locating…</h3>
+          <p id="region">—</p>
+          <p id="stamp" class="stamp">—</p>
+        </div>
+        <button type="button" id="save" class="save-btn" aria-pressed="false" title="Save this place">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9.1 9z"/></svg>
+          <span>Save</span>
+        </button>
+      </div>
+
+      <div class="hero-main">
+        <div class="art">
+          <img id="icon" src="icons/unknown.png" alt="" width="128" height="128">
+          <div class="halo" aria-hidden="true"></div>
+        </div>
+        <div class="read">
+          <p class="temp" id="temp" tabindex="0" role="button" aria-label="Temperature, click to switch units">
+            <span class="num">--</span><span class="deg">°</span><span class="unit">C</span>
+          </p>
+          <p class="cond" id="cond">—</p>
+          <p class="feels">Feels like <b id="feels">--°</b> · H <b id="hi">--°</b> L <b id="lo">--°</b></p>
+        </div>
+      </div>
+
+      <ul class="chips" id="chips"></ul>
+    </section>
+
+    <!-- SUN ARC -->
+    <section class="card sun" aria-labelledby="h-sun">
+      <h2 class="ttl" id="h-sun">Sun &amp; sky</h2>
+      <div id="sunarc" class="sunarc"></div>
+      <dl class="sun-meta">
+        <div><dt>Sunrise</dt><dd id="sunrise">—</dd></div>
+        <div><dt>Sunset</dt><dd id="sunset">—</dd></div>
+        <div><dt>Daylight</dt><dd id="daylight">—</dd></div>
+      </dl>
+    </section>
+
+    <!-- HOURLY -->
+    <section class="card hourly" aria-labelledby="h-hr">
+      <div class="card-head">
+        <h2 class="ttl" id="h-hr">Next 24 hours</h2>
+        <span class="legend"><i class="dot-t"></i>temp <i class="dot-p"></i>precip</span>
+      </div>
+      <div class="hr-wrap" id="hourly" tabindex="0" role="group" aria-label="Hourly forecast, scrollable"></div>
+    </section>
+
+    <!-- DETAIL TILES -->
+    <section class="card metrics" aria-labelledby="h-m">
+      <h2 class="ttl" id="h-m">Atmosphere</h2>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <!-- AIR QUALITY -->
+    <section class="card aqi" aria-labelledby="h-aq">
+      <h2 class="ttl" id="h-aq">Air quality</h2>
+      <div id="aqibody" class="aqi-body"></div>
+    </section>
+
+    <!-- 7 DAY -->
+    <section class="card daily" aria-labelledby="h-d">
+      <div class="card-head">
+        <h2 class="ttl" id="h-d">7-day outlook</h2>
+        <span class="legend" id="weekrange">—</span>
+      </div>
+      <ol class="days" id="daily"></ol>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <p>Data <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · no API key, no tracking.
+       Icons by <a href="https://github.com/manifestinteractive/weather-underground-icons" target="_blank" rel="noopener noreferrer">Ashley Jager</a>.</p>
+    <p class="keys"><kbd>/</kbd> search <kbd>L</kbd> locate <kbd>R</kbd> refresh <kbd>U</kbd> units <kbd>Esc</kbd> close</p>
+  </footer>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

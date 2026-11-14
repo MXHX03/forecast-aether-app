@@ -1,0 +1,16 @@
+{
+  "name": "Aether — Weather Console",
+  "short_name": "Aether",
+  "description": "Live conditions, hourly curves, a 7-day outlook, air quality and sun tracking.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#05070f",
+  "theme_color": "#05070f",
+  "categories": ["weather", "utilities"],
+  "icons": [
+    { "src": "icons/01d.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "icons/01d.png", "sizes": "128x128", "type": "image/png", "purpose": "maskable" }
+  ]
+}
